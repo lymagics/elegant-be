@@ -1,0 +1,92 @@
+[project]
+name = "elegant-be"
+version = "0.1.0"
+description = "Blogging REST API built in Elegant Objects style."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn==0.52.4",
+    "sqlalchemy[asyncio]==2.0.52",
+    "asyncpg==0.31.0",
+    "alembic==1.19.1",
+    "plum-dispatch==2.9.0",
+    "pyjwt==2.13.0",
+    "bcrypt==5.0.0",
+    "pydantic[email]==2.13.4",
+    "python-ulid==4.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pyhamcrest==2.1.0",
+    "httpx==0.28.1",
+    "pytest-randomly==4.1.0",
+    "pytest-fail-slow==0.6.0",
+    "pytest-repeat==0.9.4",
+    "hypothesis==6.165.10",
+    "testcontainers==4.15.0",
+    "psycopg2-binary==2.9.12",
+    "black>=26.5.1",
+    "flake8>=7.3.0",
+    "ruff>=0.16.4",
+    "pytest-cov>=7.1.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."]
+testpaths = ["tests/test_fast"]
+addopts = "--fail-slow=5s"
+markers = [
+    "online: needs internet access",
+]
+
+[tool.mutmut]
+paths_to_mutate = "src/"
+tests_dir = "tests/test_fast/"
+
+[tool.coverage.run]
+# Routes, app wiring and the engine wrapper are exercised only by the
+# e2e suite (tests/test_deep), see .claude/rules and make e2e.
+omit = [
+    "src/routes/*",
+    "src/schemas/*",
+    "src/app.py",
+    "src/main.py",
+    "src/postgres/db.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "@(abc\\.)?abstractmethod",
+    "@dispatch.abstract",
+]
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+exclude = ["alembic"]
+
+[tool.ruff.lint]
+# .claude/rules/eo.md demands raising bare Exception everywhere (TRY002)
+# and one blind recovery point in the Recovery middleware (BLE001).
+ignore = ["TRY002", "BLE001"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Cookie",
+    "fastapi.Header",
+    "fastapi.Security",
+    "fastapi.security.HTTPBearer",
+    "src.routes.base.SoftBearer",
+]
