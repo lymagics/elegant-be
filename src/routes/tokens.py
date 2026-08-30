@@ -1,10 +1,10 @@
 import time
 
+from elegant_jwt import ExpiringClaims, Hs256, JwtClaims
 from fastapi import APIRouter, Cookie, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.identity import Identity
-from src.domain.jwt import JwtClaims
 from src.postgres.db import AsyncSQLAlchemyDb
 from src.postgres.refreshes import PgRefreshes
 from src.postgres.users import PgUsers
@@ -71,16 +71,13 @@ class TokenRoutes:
         return router
 
     def _body(self, owner: str) -> dict:
-        access = JwtClaims(
-            {
-                "sub": owner,
-                "iat": int(time.time()),
-                "exp": int(time.time()) + 900,
-            }
-        ).token(self.bearer.secret)
+        access = ExpiringClaims(
+            JwtClaims({"sub": owner, "iat": int(time.time())}),
+            900,
+        ).token(Hs256(self.bearer.secret))
         return {
             "accessToken": access.value(),
-            "expiresIn": access.expires_in(),
+            "expiresIn": access.validity(),
         }
 
     def _attach(self, answer: Response, value: str) -> None:
