@@ -10,7 +10,7 @@ dependencies = [
     "asyncpg==0.31.0",
     "alembic==1.19.1",
     "plum-dispatch==2.9.0",
-    "pyjwt==2.13.0",
+    "elegant-jwt==0.0.1",
     "bcrypt==5.0.0",
     "pydantic[email]==2.13.4",
     "python-ulid==4.0.1",

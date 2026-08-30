@@ -1,5 +1,6 @@
 import logging
 
+from elegant_jwt import Hs256, JwtToken
 from fastapi import Request, Security
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -12,7 +13,6 @@ from ulid import ULID
 
 from src.domain.envelope import Envelope
 from src.domain.identity import Identity
-from src.domain.jwt import JwtToken
 
 
 class Bearer:
@@ -27,8 +27,8 @@ class Bearer:
     ) -> Identity:
         if grant is None:
             raise Exception("The access token is missing.")
-        claims = JwtToken(grant.credentials, self.secret).claims()
-        return Identity((await claims.json())["sub"])
+        claims = JwtToken(grant.credentials, Hs256(self.secret)).claims()
+        return Identity(claims.json()["sub"])
 
 
 class SoftBearer:
