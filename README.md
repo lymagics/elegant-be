@@ -24,7 +24,8 @@ Interactive API docs are served at `/docs` once the API is running.
 | Layer      | Choice                                  |
 |------------|-----------------------------------------|
 | Language   | Python 3.12+, fully type-hinted         |
-| Framework  | FastAPI                                 |
+| Framework  | Tanka (object-oriented ASGI framework)  |
+| Validation | OpenAPI document (`src/openapi.yaml`)   |
 | Database   | PostgreSQL (SQLAlchemy async + asyncpg) |
 | Migrations | Alembic                                 |
 | Packaging  | uv                                      |
@@ -33,11 +34,11 @@ Interactive API docs are served at `/docs` once the API is running.
 
 ```
 src/
-  domain/    interfaces and pure domain objects (User, Post, JwtToken, ...)
-  postgres/  PostgreSQL implementations of the domain interfaces
-  routes/    FastAPI route classes (UserRoutes, TokenRoutes, PostRoutes)
-  schemas/   pydantic request/response schemas
-  app.py     Application class that assembles the FastAPI app
+  domain/       interfaces and pure domain objects (User, Post, Refresh, ...)
+  postgres/     PostgreSQL implementations of the domain interfaces
+  routes/       Tanka endpoint classes, one per operation
+  openapi.yaml  OpenAPI document: docs, request and response validation
+  app.py        ElegantBe composes the whole application tree and its routes
 tests/
   test_fast/ unit tests with fakes (no external resources)
   test_deep/ integration tests against real PostgreSQL (Testcontainers)

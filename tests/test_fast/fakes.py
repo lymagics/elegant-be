@@ -1,3 +1,6 @@
+from tanka import Log
+
+
 class FakeResult:
     def __init__(self, rows: list[dict], count: int = 0):
         self.rows = rows
@@ -27,3 +30,11 @@ class FakeSession:
         if isinstance(result, Exception):
             raise result
         return result
+
+
+class FakeLog(Log):
+    def __init__(self, lines: list[str]):
+        self.lines = lines
+
+    def write(self, message: str) -> None:
+        self.lines.append(message)

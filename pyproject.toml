@@ -4,15 +4,13 @@ version = "0.1.0"
 description = "Blogging REST API built in Elegant Objects style."
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi==0.141.1",
-    "uvicorn==0.52.4",
+    "tanka[openapi,uvicorn]==0.0.1",
     "sqlalchemy[asyncio]==2.0.52",
     "asyncpg==0.31.0",
     "alembic==1.19.2",
-    "plum-dispatch==2.10.0",
-    "elegant-jwt==0.0.2",
+    "plum-dispatch==2.10.1",
+    "elegant-jwt==0.0.3",
     "bcrypt==5.0.0",
-    "pydantic[email]==2.13.5",
     "python-ulid==4.0.1",
 ]
 
@@ -77,16 +75,5 @@ exclude = ["alembic"]
 
 [tool.ruff.lint]
 # .claude/rules/eo.md demands raising bare Exception everywhere (TRY002)
-# and one blind recovery point in the Recovery middleware (BLE001).
+# and chained re-raises that catch bare Exception on purpose (BLE001).
 ignore = ["TRY002", "BLE001"]
-
-[tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = [
-    "fastapi.Depends",
-    "fastapi.Query",
-    "fastapi.Cookie",
-    "fastapi.Header",
-    "fastapi.Security",
-    "fastapi.security.HTTPBearer",
-    "src.routes.base.SoftBearer",
-]

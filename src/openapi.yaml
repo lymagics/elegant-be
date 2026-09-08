@@ -1,0 +1,452 @@
+openapi: 3.0.3
+info:
+  title: Blogging API
+  version: "1"
+  description: >-
+    A small blogging API. Users register, create a token pair to log in,
+    and manage their own posts. Every path is a resource, never an action.
+servers:
+  - url: /
+tags:
+  - name: Users
+  - name: Tokens
+  - name: Posts
+paths:
+  /v1/users:
+    post:
+      tags: [Users]
+      summary: Create user (register)
+      operationId: registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Registration"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/users/me:
+    get:
+      tags: [Users]
+      summary: Get current user
+      operationId: ownProfile
+      security:
+        - bearer: []
+      responses:
+        "200":
+          description: The profile of the token owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Users]
+      summary: Update current user
+      operationId: profileRenewal
+      security:
+        - bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserPatch"
+      responses:
+        "200":
+          description: The updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Users]
+      summary: Get user by id
+      operationId: profile
+      description: The email stays private unless the profile is your own.
+      security:
+        - bearer: []
+      responses:
+        "200":
+          description: The public profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/tokens:
+    post:
+      tags: [Tokens]
+      summary: Create token (login)
+      operationId: grant
+      description: >-
+        Answers with an access token in the body and sets the refresh token
+        as an HttpOnly cookie bound to /v1/tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Credentials"
+      responses:
+        "201":
+          description: Created
+          headers:
+            Set-Cookie:
+              description: The refreshToken cookie, valid for seven days.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Tokens]
+      summary: Refresh token
+      operationId: tokenRenewal
+      description: The refreshToken cookie is the credential, no body needed.
+      parameters:
+        - name: refreshToken
+          in: cookie
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A fresh access token and a renewed cookie
+          headers:
+            Set-Cookie:
+              description: The renewed refreshToken cookie.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Tokens]
+      summary: Revoke token (logout)
+      operationId: revocation
+      security:
+        - bearer: []
+      parameters:
+        - name: refreshToken
+          in: cookie
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+          headers:
+            Set-Cookie:
+              description: Clears the refreshToken cookie.
+              schema:
+                type: string
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/posts:
+    post:
+      tags: [Posts]
+      summary: Create post
+      operationId: postCreation
+      security:
+        - bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Creation"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        default:
+          $ref: "#/components/responses/Error"
+    get:
+      tags: [Posts]
+      summary: List posts
+      operationId: postPage
+      description: Only published posts are listed.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: authorId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A page of published posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/posts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Posts]
+      summary: Get post by id
+      operationId: postView
+      description: An unpublished post is visible to its author only.
+      security:
+        - bearer: []
+        - {}
+      responses:
+        "200":
+          description: The post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Posts]
+      summary: Update post
+      operationId: postRenewal
+      security:
+        - bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostPatch"
+      responses:
+        "200":
+          description: The updated post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Posts]
+      summary: Delete post
+      operationId: postRemoval
+      security:
+        - bearer: []
+      responses:
+        "204":
+          description: No Content
+        default:
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Registration:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+    UserPatch:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+        bio:
+          type: string
+          nullable: true
+          maxLength: 500
+    Credentials:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+          maxLength: 72
+    Creation:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        content:
+          type: string
+          minLength: 1
+        published:
+          type: boolean
+          default: false
+    PostPatch:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        content:
+          type: string
+          minLength: 1
+        published:
+          type: boolean
+    User:
+      type: object
+      required: [id, username, email, bio, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        bio:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Profile:
+      type: object
+      description: The email and updatedAt appear only for your own profile.
+      required: [id, username, bio, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        bio:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    Token:
+      type: object
+      required: [accessToken, expiresIn]
+      properties:
+        accessToken:
+          type: string
+        expiresIn:
+          type: integer
+    Post:
+      type: object
+      required: [id, authorId, title, content, published, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        published:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Page:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Post"
+        meta:
+          type: object
+          required: [total, page, limit]
+          properties:
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string
