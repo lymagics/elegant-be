@@ -1,82 +1,89 @@
-from fastapi import APIRouter, Depends, Query, Response
-from sqlalchemy.ext.asyncio import AsyncSession
+from tanka import Abort, Empty, Endpoint, Json, Reply, Request, Response
 
-from src.domain.identity import Identity
 from src.postgres.db import AsyncSQLAlchemyDb
 from src.postgres.post import PgPost
 from src.postgres.posts import PgPosts
-from src.routes.base import Bearer, SoftBearer
-from src.schemas.request.post import CreationSchema, PostPatchSchema
-from src.schemas.response.post import PageSchema, PostSchema
 
 
-class PostRoutes:
-    def __init__(self, db: AsyncSQLAlchemyDb, bearer: Bearer):
+class PostCreation(Endpoint):
+    def __init__(self, db: AsyncSQLAlchemyDb):
         self.db = db
-        self.bearer = bearer
 
-    def router(self) -> APIRouter:
-        router = APIRouter(tags=["Posts"])
-
-        @router.post("/posts", status_code=201, response_model=PostSchema)
-        async def creation(
-            request: CreationSchema,
-            identity: Identity = Depends(self.bearer),
-            db: AsyncSession = Depends(self.db.db),
-        ) -> dict:
+    async def response(self, request: Request) -> Reply:
+        body = await request.body().json()
+        async with self.db.db() as db:
             post = await PgPosts(db).creation(
-                identity.id(),
-                request.title,
-                request.content,
-                request.published,
+                request.identity().id(),
+                body["title"],
+                body["content"],
+                body.get("published", False),
             )
-            return await post.json()
+            return Response(201, Json(await post.json()))
 
-        @router.get("/posts", response_model=PageSchema)
-        async def page(
-            page: int = Query(default=1, ge=1),
-            limit: int = Query(default=20, ge=1, le=100),
-            author: str = Query(default="", alias="authorId"),
-            db: AsyncSession = Depends(self.db.db),
-        ) -> dict:
-            sheet = await PgPosts(db).page(page, limit, author)
-            return await sheet.json()
 
-        @router.get("/posts/{id}", response_model=PostSchema)
-        async def post(
-            id: str,
-            identity: Identity = Depends(SoftBearer(self.bearer)),
-            db: AsyncSession = Depends(self.db.db),
-        ) -> dict:
-            record = await PgPosts(db).post(id)
+class PostPage(Endpoint):
+    def __init__(self, db: AsyncSQLAlchemyDb):
+        self.db = db
+
+    async def response(self, request: Request) -> Reply:
+        query = request.target().query()
+        async with self.db.db() as db:
+            sheet = await PgPosts(db).page(
+                int((query.values("page") or ["1"])[0]),
+                int((query.values("limit") or ["20"])[0]),
+                (query.values("authorId") or [""])[0],
+            )
+            return Response(Json(await sheet.json()))
+
+
+class PostView(Endpoint):
+    def __init__(self, db: AsyncSQLAlchemyDb):
+        self.db = db
+
+    async def response(self, request: Request) -> Reply:
+        id = request.target().path().parameter("id")
+        async with self.db.db() as db:
+            try:
+                record = await PgPosts(db).post(id)
+            except Exception as error:
+                raise Abort(404, str(error)) from error
             if not await record.published() and not await record.authored_by(
-                identity.id()
+                request.identity().id()
             ):
-                raise Exception("The post is not published.")
-            return await record.json()
+                raise Abort(403, "The post is not published.")
+            return Response(Json(await record.json()))
 
-        @router.patch("/posts/{id}", response_model=PostSchema)
-        async def renewal(
-            id: str,
-            request: PostPatchSchema,
-            identity: Identity = Depends(self.bearer),
-            db: AsyncSession = Depends(self.db.db),
-        ) -> dict:
-            record = PgPost(db, id)
-            if not await record.authored_by(identity.id()):
-                raise Exception("You are not the author of this post.")
-            await record.patch(request.model_dump(exclude_unset=True))
-            return await record.json()
 
-        @router.delete("/posts/{id}", status_code=204)
-        async def removal(
-            id: str,
-            identity: Identity = Depends(self.bearer),
-            db: AsyncSession = Depends(self.db.db),
-        ) -> Response:
-            if not await PgPost(db, id).authored_by(identity.id()):
-                raise Exception("You are not the author of this post.")
+class PostRenewal(Endpoint):
+    def __init__(self, db: AsyncSQLAlchemyDb):
+        self.db = db
+
+    async def response(self, request: Request) -> Reply:
+        body = await request.body().json()
+        async with self.db.db() as db:
+            record = PgPost(db, request.target().path().parameter("id"))
+            try:
+                authorship = await record.authored_by(request.identity().id())
+            except Exception as error:
+                raise Abort(404, str(error)) from error
+            if not authorship:
+                raise Abort(403, "You are not the author of this post.")
+            await record.patch(body)
+            return Response(Json(await record.json()))
+
+
+class PostRemoval(Endpoint):
+    def __init__(self, db: AsyncSQLAlchemyDb):
+        self.db = db
+
+    async def response(self, request: Request) -> Reply:
+        id = request.target().path().parameter("id")
+        async with self.db.db() as db:
+            try:
+                authorship = await PgPost(db, id).authored_by(request.identity().id())
+            except Exception as error:
+                raise Abort(404, str(error)) from error
+            if not authorship:
+                raise Abort(403, "You are not the author of this post.")
             await PgPosts(db).remove(id)
-            return Response(status_code=204)
-
-        return router
+        return Response(204, Empty())

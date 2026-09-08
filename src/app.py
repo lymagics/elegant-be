@@ -1,17 +1,115 @@
-from fastapi import APIRouter, FastAPI
-from fastapi.exceptions import RequestValidationError
+from pathlib import Path
 
-from src.routes.base import Recovery, invalid
+from tanka import (
+    Authenticated,
+    Catch,
+    Delete,
+    Get,
+    Logging,
+    Mount,
+    On,
+    OpenApi,
+    Patch,
+    Post,
+    Route,
+    Routes,
+    Tanka,
+)
+
+from src.postgres.db import AsyncSQLAlchemyDb
+from src.routes.base import Bearer, Recovery, SoftBearer
+from src.routes.posts import (
+    PostCreation,
+    PostPage,
+    PostRemoval,
+    PostRenewal,
+    PostView,
+)
+from src.routes.tokens import Grant, Revocation, TokenRenewal
+from src.routes.users import OwnProfile, Profile, ProfileRenewal, Registration
 
 
-class Application:
-    def __init__(self, *routers: APIRouter):
-        self.routers = routers
+class ElegantBe:
+    def __init__(self, db: AsyncSQLAlchemyDb, bearer: Bearer):
+        self.db = db
+        self.bearer = bearer
 
-    def app(self) -> FastAPI:
-        app = FastAPI(title="Blogging API", version="1")
-        app.add_middleware(Recovery)
-        app.add_exception_handler(RequestValidationError, invalid)
-        for router in self.routers:
-            app.include_router(router, prefix="/v1")
-        return app
+    def app(self) -> Tanka:
+        return Tanka(
+            Catch(
+                OpenApi(
+                    str(Path(__file__).with_name("openapi.yaml")),
+                    Routes(
+                        Mount(
+                            "/v1",
+                            Routes(
+                                Route(
+                                    Post(),
+                                    "/users",
+                                    Registration(self.db),
+                                ),
+                                Route(
+                                    Get(),
+                                    "/users/me",
+                                    Authenticated(OwnProfile(self.db), self.bearer),
+                                ),
+                                Route(
+                                    Patch(),
+                                    "/users/me",
+                                    Authenticated(ProfileRenewal(self.db), self.bearer),
+                                ),
+                                Route(
+                                    Get(),
+                                    "/users/{id}",
+                                    Authenticated(Profile(self.db), self.bearer),
+                                ),
+                                Route(
+                                    Post(),
+                                    "/tokens",
+                                    Grant(self.db, self.bearer),
+                                ),
+                                Route(
+                                    Patch(),
+                                    "/tokens",
+                                    TokenRenewal(self.db, self.bearer),
+                                ),
+                                Route(
+                                    Delete(),
+                                    "/tokens",
+                                    Authenticated(Revocation(self.db), self.bearer),
+                                ),
+                                Route(
+                                    Post(),
+                                    "/posts",
+                                    Authenticated(PostCreation(self.db), self.bearer),
+                                ),
+                                Route(
+                                    Get(),
+                                    "/posts",
+                                    PostPage(self.db),
+                                ),
+                                Route(
+                                    Get(),
+                                    "/posts/{id}",
+                                    Authenticated(
+                                        PostView(self.db),
+                                        SoftBearer(self.bearer),
+                                    ),
+                                ),
+                                Route(
+                                    Patch(),
+                                    "/posts/{id}",
+                                    Authenticated(PostRenewal(self.db), self.bearer),
+                                ),
+                                Route(
+                                    Delete(),
+                                    "/posts/{id}",
+                                    Authenticated(PostRemoval(self.db), self.bearer),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+                On(..., Recovery(Logging("app"))),
+            ),
+        )

@@ -1,5 +1,5 @@
 import pytest
-from hamcrest import assert_that, equal_to, has_entry, has_key
+from hamcrest import assert_that, contains_string, equal_to, has_entry, has_key
 from httpx import AsyncClient
 
 pytestmark = [pytest.mark.online, pytest.mark.fail_slow("180s")]
@@ -110,6 +110,35 @@ async def test_ends_session_with_no_content(client: AsyncClient):
         answer.status_code,
         equal_to(204),
         "The logout must answer 204 No Content",
+    )
+
+
+async def test_clears_refresh_cookie_on_logout(client: AsyncClient):
+    await client.post(
+        "/v1/users",
+        json={
+            "username": "tidy_tomas",
+            "email": "tomas@clean.example",
+            "password": "wipe-1t-clean",
+        },
+    )
+    grant = (
+        await client.post(
+            "/v1/tokens",
+            json={
+                "email": "tomas@clean.example",
+                "password": "wipe-1t-clean",
+            },
+        )
+    ).json()
+    answer = await client.delete(
+        "/v1/tokens",
+        headers={"Authorization": f"Bearer {grant['accessToken']}"},
+    )
+    assert_that(
+        answer.headers["set-cookie"],
+        contains_string("refreshToken=; "),
+        "The logout must answer with a cookie that clears the refresh token",
     )
 
 

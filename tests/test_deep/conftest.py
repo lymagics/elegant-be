@@ -8,17 +8,14 @@ from sqlalchemy import create_engine, text
 from testcontainers.community.postgres import PostgresContainer
 
 from alembic import command
-from src.app import Application
+from src.app import ElegantBe
 from src.postgres.db import AsyncSQLAlchemyDb
 from src.routes.base import Bearer
-from src.routes.posts import PostRoutes
-from src.routes.tokens import TokenRoutes
-from src.routes.users import UserRoutes
 
 
 @pytest.fixture(scope="session")
 def postgres() -> Iterator[str]:
-    with PostgresContainer("postgres:16-alpine") as container:
+    with PostgresContainer("postgres:18-alpine") as container:
         yield container.get_connection_url()
 
 
@@ -45,13 +42,7 @@ async def client(
 ) -> AsyncIterator[AsyncClient]:
     db = AsyncSQLAlchemyDb(migrated.replace("+psycopg2", "+asyncpg"))
     bearer = Bearer(f"deep-secret-{request.node.name}")
-    transport = ASGITransport(
-        app=Application(
-            UserRoutes(db, bearer).router(),
-            TokenRoutes(db, bearer).router(),
-            PostRoutes(db, bearer).router(),
-        ).app()
-    )
+    transport = ASGITransport(app=ElegantBe(db, bearer).app().asgi())
     async with AsyncClient(transport=transport, base_url="https://stage") as browser:
         yield browser
     await db.engine.dispose()

@@ -1,92 +1,132 @@
 import time
 
 from elegant_jwt import ExpiringClaims, Hs256, JwtClaims
-from fastapi import APIRouter, Cookie, Depends, Response
-from sqlalchemy.ext.asyncio import AsyncSession
+from tanka import (
+    Abort,
+    Cookie,
+    CookiePath,
+    Empty,
+    Endpoint,
+    ForgetCookie,
+    HttpOnly,
+    Json,
+    Lifetime,
+    Reply,
+    Request,
+    Response,
+    SameSite,
+    Secure,
+    WithCookie,
+)
 
-from src.domain.identity import Identity
+from src.domain.json_readable import JsonReadable
 from src.postgres.db import AsyncSQLAlchemyDb
 from src.postgres.refreshes import PgRefreshes
 from src.postgres.users import PgUsers
 from src.routes.base import Bearer
-from src.schemas.request.token import CredentialsSchema
-from src.schemas.response.token import TokenSchema
 
 
-class TokenRoutes:
+class AccessToken(JsonReadable):
+    def __init__(self, owner: str, secret: str):
+        self.owner = owner
+        self.secret = secret
+
+    async def json(self) -> dict:
+        access = ExpiringClaims(
+            JwtClaims({"sub": self.owner, "iat": int(time.time())}),
+            900,
+        ).token(Hs256(self.secret))
+        return {"accessToken": access.value(), "expiresIn": access.validity()}
+
+
+class Grant(Endpoint):
     def __init__(self, db: AsyncSQLAlchemyDb, bearer: Bearer):
         self.db = db
         self.bearer = bearer
 
-    def router(self) -> APIRouter:
-        router = APIRouter(tags=["Tokens"])
-
-        @router.post("/tokens", status_code=201, response_model=TokenSchema)
-        async def grant(
-            request: CredentialsSchema,
-            answer: Response,
-            db: AsyncSession = Depends(self.db.db),
-        ) -> dict:
-            user = await PgUsers(db).user(request.email, request.password)
+    async def response(self, request: Request) -> Reply:
+        body = await request.body().json()
+        async with self.db.db() as db:
+            try:
+                user = await PgUsers(db).user(body["email"], body["password"])
+            except Exception as error:
+                raise Abort(401, str(error)) from error
             refresh = await PgRefreshes(db).grant(user.id())
-            self._attach(answer, refresh.value())
-            return self._body(user.id())
+        return WithCookie(
+            Response(
+                201,
+                Json(await AccessToken(user.id(), self.bearer.secret).json()),
+            ),
+            Cookie(
+                "refreshToken",
+                refresh.value(),
+                HttpOnly(),
+                Secure(),
+                SameSite("Strict"),
+                CookiePath("/v1/tokens"),
+                Lifetime(604800),
+            ),
+        )
 
-        @router.patch("/tokens", response_model=TokenSchema)
-        async def renewal(
-            answer: Response,
-            token: str = Cookie(default="", alias="refreshToken"),
-            db: AsyncSession = Depends(self.db.db),
-        ) -> dict:
-            if token == "":
-                raise Exception("The refresh token cookie is missing.")
+
+class TokenRenewal(Endpoint):
+    def __init__(self, db: AsyncSQLAlchemyDb, bearer: Bearer):
+        self.db = db
+        self.bearer = bearer
+
+    async def response(self, request: Request) -> Reply:
+        try:
+            token = request.cookies().cookie("refreshToken")
+        except Exception as error:
+            raise Abort(401, "The refresh token cookie is missing.") from error
+        async with self.db.db() as db:
             refreshes = PgRefreshes(db)
-            refresh = await refreshes.refresh(token)
+            try:
+                refresh = await refreshes.refresh(token)
+            except Exception as error:
+                raise Abort(401, str(error)) from error
             await refreshes.revoke(token)
             fresh = await refreshes.grant(refresh.owner())
-            self._attach(answer, fresh.value())
-            return self._body(refresh.owner())
-
-        @router.delete("/tokens", status_code=204)
-        async def revocation(
-            identity: Identity = Depends(self.bearer),
-            token: str = Cookie(default="", alias="refreshToken"),
-            db: AsyncSession = Depends(self.db.db),
-        ) -> Response:
-            if token == "":
-                raise Exception("The refresh token cookie is missing.")
-            refreshes = PgRefreshes(db)
-            await refreshes.refresh(token)
-            await refreshes.revoke(token)
-            answer = Response(status_code=204)
-            answer.delete_cookie(
+        return WithCookie(
+            Response(
+                200,
+                Json(await AccessToken(fresh.owner(), self.bearer.secret).json()),
+            ),
+            Cookie(
                 "refreshToken",
-                path="/v1/tokens",
-                httponly=True,
-                secure=True,
-                samesite="strict",
-            )
-            return answer
+                fresh.value(),
+                HttpOnly(),
+                Secure(),
+                SameSite("Strict"),
+                CookiePath("/v1/tokens"),
+                Lifetime(604800),
+            ),
+        )
 
-        return router
 
-    def _body(self, owner: str) -> dict:
-        access = ExpiringClaims(
-            JwtClaims({"sub": owner, "iat": int(time.time())}),
-            900,
-        ).token(Hs256(self.bearer.secret))
-        return {
-            "accessToken": access.value(),
-            "expiresIn": access.validity(),
-        }
+class Revocation(Endpoint):
+    def __init__(self, db: AsyncSQLAlchemyDb):
+        self.db = db
 
-    def _attach(self, answer: Response, value: str) -> None:
-        answer.set_cookie(
-            "refreshToken",
-            value,
-            max_age=604800,
-            httponly=True,
-            secure=True,
-            samesite="strict",
-            path="/v1/tokens",
+    async def response(self, request: Request) -> Reply:
+        try:
+            token = request.cookies().cookie("refreshToken")
+        except Exception as error:
+            raise Abort(401, "The refresh token cookie is missing.") from error
+        async with self.db.db() as db:
+            refreshes = PgRefreshes(db)
+            try:
+                await refreshes.refresh(token)
+            except Exception as error:
+                raise Abort(401, str(error)) from error
+            await refreshes.revoke(token)
+        return WithCookie(
+            Response(204, Empty()),
+            ForgetCookie(
+                "refreshToken",
+                HttpOnly(),
+                Secure(),
+                SameSite("Strict"),
+                CookiePath("/v1/tokens"),
+            ),
         )
