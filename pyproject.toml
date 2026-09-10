@@ -25,7 +25,7 @@ dev = [
     "pytest-repeat==0.9.4",
     "hypothesis==6.168.0",
     "testcontainers==4.15.0",
-    "psycopg2-binary==2.9.12",
+    "psycopg2-binary==2.9.13",
     "black>=26.5.1",
     "flake8>=7.3.0",
     "ruff>=0.16.4",
