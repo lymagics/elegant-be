@@ -649,7 +649,7 @@ requires-dist = [
     { name = "plum-dispatch", specifier = "==2.10.1" },
     { name = "python-ulid", specifier = "==4.0.1" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.0.52" },
-    { name = "tanka", extras = ["openapi", "uvicorn"], specifier = "==0.0.1" },
+    { name = "tanka", extras = ["openapi", "uvicorn"], specifier = "==0.0.2" },
 ]
 
 [package.metadata.requires-dev]
@@ -1867,15 +1867,15 @@ asyncio = [
 
 [[package]]
 name = "tanka"
-version = "0.0.1"
+version = "0.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "parse" },
     { name = "plum-dispatch" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/94/5d/b3599a3fe33bc0e41ba5c8e97141d0afd46dca60ea6f12e3371b08271c34/tanka-0.0.1.tar.gz", hash = "sha256:512992ddae56500406e661f0152de7c814a4d661a6e15c49f67739b298ed8c70", size = 141452, upload-time = "2026-09-08T11:25:44.121Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/97/22/2798b925b7f46875f79cadd8f1638c767be938fba0f5a76a187932a0a8d7/tanka-0.0.2.tar.gz", hash = "sha256:cd7708ff48c82857a30ed023f05584ded2fec18b207c2e1ba5fffd0e174ed705", size = 145303, upload-time = "2026-09-11T11:44:49.226Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/5d/bcee37d9725e4ef2e8967ff8a6f1d89fc826f8758a38e1079da13138a139/tanka-0.0.1-py3-none-any.whl", hash = "sha256:7131f4d431f13cd5ad074cf4cca77e5f7849169bb742da8dd416015e09e41eda", size = 26570, upload-time = "2026-09-08T11:25:43.019Z" },
+    { url = "https://files.pythonhosted.org/packages/48/92/7c8d4c341a74910ed2dfc2050f2dcd15c37cb764fcfab83789872f01e0b5/tanka-0.0.2-py3-none-any.whl", hash = "sha256:4bd69ca41887c16d3e974a657a9fce2b69f88b1fbff2ba1135475cc4fdc1ca7c", size = 28703, upload-time = "2026-09-11T11:44:48.413Z" },
 ]
 
 [package.optional-dependencies]
