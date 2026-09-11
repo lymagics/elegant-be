@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Blogging REST API built in Elegant Objects style."
 requires-python = ">=3.12"
 dependencies = [
-    "tanka[openapi,uvicorn]==0.0.1",
+    "tanka[openapi,uvicorn]==0.0.2",
     "sqlalchemy[asyncio]==2.0.52",
     "asyncpg==0.31.0",
     "alembic==1.19.2",
