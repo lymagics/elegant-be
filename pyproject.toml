@@ -5,7 +5,7 @@ description = "Blogging REST API built in Elegant Objects style."
 requires-python = ">=3.12"
 dependencies = [
     "tanka[openapi,uvicorn]==0.0.2",
-    "sqlalchemy[asyncio]==2.0.53",
+    "sqlalchemy[asyncio]==2.0.54",
     "asyncpg==0.31.0",
     "alembic==1.20.0",
     "plum-dispatch==2.10.1",
