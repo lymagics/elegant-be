@@ -65,7 +65,7 @@ async def test_rejects_expired_credentials():
     outdated = ExpiringClaims(JwtClaims({"sub": "relic-88"}), -7200).token(
         Hs256("gate-secret-5-padded-to-thirty-two-byte")
     )
-    with pytest.raises(Abort, match="not valid"):
+    with pytest.raises(Abort, match="has expired"):
         await Bearer("gate-secret-5-padded-to-thirty-two-byte").identity(
             Request(
                 Get(),
