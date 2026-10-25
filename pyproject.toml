@@ -17,7 +17,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest==9.1.1",
-    "pytest-asyncio==1.4.0",
+    "pytest-asyncio==1.4.1",
     "pyhamcrest==2.1.0",
     "httpx==0.28.1",
     "pytest-randomly==5.0.0",
