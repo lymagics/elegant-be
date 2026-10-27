@@ -11,7 +11,7 @@ dependencies = [
     "plum-dispatch==2.10.1",
     "elegant-jwt==0.0.8",
     "bcrypt==5.0.0",
-    "python-ulid==4.0.1",
+    "python-ulid==4.1.0",
 ]
 
 [dependency-groups]
