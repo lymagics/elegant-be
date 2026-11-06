@@ -667,7 +667,7 @@ requires-dist = [
     { name = "alembic", specifier = "==1.20.1" },
     { name = "asyncpg", specifier = "==0.32.0" },
     { name = "bcrypt", specifier = "==5.0.0" },
-    { name = "elegant-jwt", specifier = "==0.0.8" },
+    { name = "elegant-jwt", specifier = "==0.0.10" },
     { name = "plum-dispatch", specifier = "==2.10.1" },
     { name = "python-ulid", specifier = "==4.1.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.1.8" },
@@ -694,15 +694,15 @@ dev = [
 
 [[package]]
 name = "elegant-jwt"
-version = "0.0.8"
+version = "0.0.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "plum-dispatch" },
     { name = "pyjwt", extra = ["crypto"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/90/12/f4c962ce8859e9f0238e6472248859247748be2d53e4bdc28d79039ebc15/elegant_jwt-0.0.8.tar.gz", hash = "sha256:64a2c37938b2ecbe88bffff26f5cfc43c2825304ae7c9a0a28267ae8b6c48604", size = 73910, upload-time = "2026-10-16T08:43:03.767Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/01/61/7ff3a425edcb73552a1de8956c0e2a77a3c291fce398a99db0f26a9b8d93/elegant_jwt-0.0.10.tar.gz", hash = "sha256:7f4a71a212aa10dc6c199a13c636b715ce756d9121d4cdbda078beffd9cf46da", size = 75374, upload-time = "2026-11-06T10:01:56.174Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/ee/4c2d52e8d6c1f23daaa3df10dc1429e53fa7193d344cffbdf99ca2630ac9/elegant_jwt-0.0.8-py3-none-any.whl", hash = "sha256:e3c2290a2eb7b3cb5a3964a255f563bfec37a78bd4b1980c1c1e58620117d244", size = 7865, upload-time = "2026-10-16T08:43:02.927Z" },
+    { url = "https://files.pythonhosted.org/packages/d0/89/89d4373011e2277745aedc4167233ec90696d22cd8c30d88cb2b721846a9/elegant_jwt-0.0.10-py3-none-any.whl", hash = "sha256:b1af422203ce139c0816085b6394973e1c1b34b49aafa03b771c27c149de18ac", size = 8006, upload-time = "2026-11-06T10:01:55.333Z" },
 ]
 
 [[package]]
